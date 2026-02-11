@@ -1,0 +1,31 @@
+# 核心GUI和3D渲染
+PyQt6>=6.6.0
+PyQt6-Qt6>=6.6.0
+PyOpenGL>=3.1.7
+PyOpenGL-accelerate>=3.1.7
+
+# FBX模型加载
+pyassimp>=5.2.5
+
+# 语音处理
+SpeechRecognition>=3.10.1
+pyttsx3>=2.90
+pvporcupine>=3.0.1
+PyAudio>=0.2.14
+webrtcvad>=2.0.10
+
+# 系统托盘
+pystray>=0.19.4
+pillow>=10.1.0
+
+# LLM集成
+ollama>=0.1.7
+requests>=2.31.0
+
+# 工具库
+numpy>=1.26.2
+pyyaml>=6.0.1
+psutil>=5.9.6
+
+# 可选: 更好的语音合成
+edge-tts>=6.1.9
