@@ -81,209 +81,133 @@ ai-assistant/
 │   ├── window.py           # 主窗口管理
 │   ├── renderer.py         # OpenGL 3D渲染
 │   ├── fbx_loader.py       # FBX模型加载
-│   ├── animator.py         # 动画控制器
-│   ├── voice_recognizer.py # 语音识别
-│   ├── voice_synthesizer.py# 语音合成
-│   ├── wake_word.py        # 唤醒词检测
-│   ├── llm_client.py       # Ollama客户端
-│   ├── chat_panel.py       # 对话面板
-│   ├── settings_panel.py   # 设置面板
-│   └── tray_icon.py        # 系统托盘
-│
-├── utils/                  # 工具模块
-│   ├── thread_pool.py      # 线程池管理
-│   └── helpers.py          # 辅助函数
-│
-├── assets/                 # 资源文件
-│   ├── models/             # FBX模型文件
-│   ├── voices/             # 语音样本
-│   └── icons/              # 图标资源
-│
-└── logs/                   # 日志文件
-```
+# AI助手桌面应用
 
-## 🎮 使用指南
+一个轻量化的本地桌面AI助手，支持语音交互、本地LLM以及可定制的视觉展示。
 
-### 基本操作
-
-| 操作 | 说明 |
-|------|------|
-| 双击3D模型 | 打开/关闭对话面板 |
-| 拖动3D模型 | 移动窗口位置 |
-| 右键3D模型 | 显示设置菜单 |
-| 语音唤醒 | 说出唤醒词 (默认: "小助手") |
-
-### 语音命令
-
-- **"小助手"** - 唤醒AI助手
-- **"打开设置"** - 打开设置面板
-- **"清除历史"** - 清除对话历史
-- **"退出"** - 关闭应用
-
-### 快捷键
-
-| 快捷键 | 功能 |
-|--------|------|
-| `Ctrl + ,` | 打开设置 |
-| `Ctrl + H` | 显示/隐藏窗口 |
-| `Ctrl + Q` | 退出应用 |
-| `Esc` | 关闭面板 |
-
-## ⚙️ 配置说明
-
-配置文件位于 `config.json`，可自定义以下选项：
-
-### 窗口设置
-```json
-{
-  "window": {
-    "width": 400,
-    "height": 600,
-    "pos_x": 1400,
-    "pos_y": 400,
-    "opacity": 0.95,
-    "always_on_top": true
-  }
-}
-```
-
-### 模型设置
-```json
-{
-  "model": {
-    "current": "default.fbx",
-    "scale": 1.0,
-    "animation_speed": 1.0
-  }
-}
-```
-
-### 语音设置
-```json
-{
-  "voice": {
-    "recognition_lang": "zh-CN",
-    "synthesis_voice": "zh-CN-XiaoxiaoNeural",
-    "synthesis_rate": 150,
-    "synthesis_volume": 0.8
-  }
-}
-```
-
-### Ollama设置
-```json
-{
-  "ollama": {
-    "host": "http://localhost:11434",
-    "model": "llama3.2",
-    "temperature": 0.7,
-    "max_tokens": 2048
-  }
-}
-```
-
-## 🎨 自定义3D模型
-
-1. 准备FBX格式的3D模型文件
-2. 将模型文件放入 `assets/models/` 目录
-3. 在设置面板中选择该模型
-
-### 模型要求
-
-- 格式: FBX (Binary或ASCII)
-- 大小: 建议不超过10MB
-- 多边形数: 建议不超过10000面
-- 动画: 支持骨骼动画
-
-## 🎙️ 语音配置
-
-### 语音识别
-
-默认使用Google语音识别 (需要网络连接)。
-
-如需离线识别，可安装Vosk：
-```bash
-pip install vosk
-```
-
-### 语音合成
-
-支持多种语音引擎：
-
-1. **pyttsx3** (离线，默认)
-2. **Edge TTS** (在线，质量更好)
-
-启用Edge TTS：
-```bash
-pip install edge-tts
-```
-
-然后在设置中选择Edge TTS语音。
-
-## 🔧 故障排除
-
-### 应用无法启动
-
-1. 检查Python版本: `python --version`
-2. 检查依赖安装: `pip list | grep PyQt6`
-3. 查看日志文件: `logs/ai-assistant.log`
-
-### Ollama连接失败
-
-1. 检查Ollama是否运行: `ollama list`
-2. 检查服务地址配置
-3. 防火墙设置
-
-### 语音识别不工作
-
-1. 检查麦克风权限
-2. 检查PyAudio安装
-3. 校准麦克风 (在设置中)
-
-### 3D模型不显示
-
-1. 检查OpenGL支持
-2. 更新显卡驱动
-3. 尝试简化模型
-
-## 📝 更新日志
-
-### v1.0.0 (2024-01-01)
-
-- ✨ 初始版本发布
-- 🎨 3D模型显示支持
-- 🎙️ 语音交互功能
-- 🤖 Ollama LLM集成
-- ⚙️ 完整的设置面板
-
-## 🤝 贡献指南
-
-欢迎提交Issue和Pull Request！
-
-1. Fork本项目
-2. 创建功能分支: `git checkout -b feature/xxx`
-3. 提交更改: `git commit -am 'Add xxx'`
-4. 推送分支: `git push origin feature/xxx`
-5. 创建Pull Request
-
-## 📄 许可证
-
-本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件
-
-## 🙏 致谢
-
-- [PyQt6](https://www.riverbankcomputing.com/software/pyqt/) - GUI框架
-- [Ollama](https://ollama.com) - 本地LLM运行环境
-- [OpenGL](https://www.opengl.org/) - 3D图形渲染
-- [Porcupine](https://picovoice.ai/platform/porcupine/) - 唤醒词检测
-
-## 📧 联系方式
-
-如有问题或建议，欢迎通过以下方式联系：
-
-- 提交 [GitHub Issue](https://github.com/yourusername/ai-assistant/issues)
-- 发送邮件至: your.email@example.com
+> 注意：最近的改动中我们已临时放弃复杂的 FBX 渲染管线，改为支持直接在窗口中渲染图片（更稳定、跨平台、易于调试）。项目仍保留3D渲染路径，可在后续恢复。
 
 ---
 
-**Made with ❤️ by AI Assistant**
+## 主要变化（重要）
+
+- 将 `modules/renderer.py` 增加了图片渲染模式：通过 `renderer.load_image(Path)` 加载图片后，优先使用 `QPainter` 绘制图片到窗口，快速可见且无需 FBX 依赖。
+- 修复并强化了窗口与 OpenGL 初始化（`modules/window.py`、`main.py` 中增加了对 primaryScreen() 返回 None 情形的兜底）。
+- 保留并改进了 OpenGL 调试路径（着色器日志、固定管线回退、覆盖调试三角），便于调试显卡/驱动问题。
+
+---
+
+## 环境与依赖
+
+- Python 3.10+
+- 在虚拟环境中安装依赖（推荐）：
+
+```powershell
+python -m venv .venv; .\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+requirements.txt 中常见依赖（示例）：PyQt6、PyOpenGL、numpy、pillow（用于图片，QImage 也可用）等。
+
+如果需要 FBX 功能，请额外安装 `pyassimp`（可选且在某些平台上难以编译）。
+
+---
+
+## 快速运行（Windows / PowerShell）
+
+1. 从项目根目录启动（非常重要：在项目根目录运行 `python main.py`，确保模块路径和配置生效）：
+
+```powershell
+python main.py
+```
+
+2. 或者使用提供的启动脚本：双击 `start.bat` 或在 PowerShell 中运行：
+
+```powershell
+.\start.bat
+```
+
+注意：请始终从项目根目录运行脚本，避免直接对 `modules/*.py` 单独运行（会导致相对导入错误）。
+
+---
+
+## 图片渲染：如何快速验证（推荐）
+
+这个改动的目标是让你能最快看到视觉输出而不依赖 FBX。方法：
+
+1. 选择一张图片放到 `assets/icons/`，例如 `assets/icons/avatar.png`。
+2. 在程序运行后，通过 Python 交互或在代码里调用：
+
+```python
+from pathlib import Path
+# 假设 app 是 AIAssistantApp 实例并已初始化
+app.main_window.renderer.load_image(Path('assets/icons/avatar.png'))
+```
+
+或者在应用中增加设置项由 UI 调用（我可以帮你把这个功能加入设置面板）。图片会按窗口大小拉伸显示，便于快速确认渲染管线工作正常。
+
+---
+
+## API 与开发者说明
+
+- `modules/renderer.py`：主要类 `OpenGLRenderer`。
+  - 新增方法：`load_image(self, image_path: Path) -> bool` —— 加载图片并切换到图片渲染模式。
+  - 如果 `self.image` 不为 None，`paintGL` 将使用 `QPainter` 绘制图片并直接返回（优先级高于 3D 渲染）。
+
+- `modules/window.py`：主窗口管理，已调整透明度与主屏幕获取的鲁棒性。
+
+- `main.py`：应用启动入口；请从项目根目录运行，确保 `config` 正确加载。
+
+---
+
+## 调试与常见问题
+
+- ImportError: attempted relative import with no known parent package
+  - 原因：直接运行模块文件（如 `python modules/window.py`）会导致包上下文缺失，进而使相对导入失败。
+  - 解决：请从项目根目录运行 `python main.py`，或使用 `python -m` 按包方式运行（若你把项目改为可安装包）。
+
+- 窗口全透明或看不到内容
+  - 检查 `config.window.opacity`（默认 0.95）。在高透明度情况下，某些平台窗口组合可能看起来“不可见”。`modules/window.py` 已做阈值处理，仅在 opacity < 0.5 时启用 `WA_TranslucentBackground`。
+
+- OpenGL 相关问题
+  - 程序会在日志中输出 GL Vendor/Renderer/Version/GLSL 信息（查看 `logs/ai-assistant.log`）。确保显卡驱动支持 OpenGL 3.3+
+  - 如果着色器失败，会在日志中记录编译或链接错误，并回退到固定管线绘制（兼容模式）。
+
+---
+
+## 恢复 FBX / 3D 路径
+
+如果你希望恢复 FBX 渲染流程（更完整的 3D avatar），后续工作包括：
+
+1. 安装并确认 `pyassimp` 可用，或替换为更可靠的 FBX 解析器。
+2. 校验模型的坐标系、缩放与相机设置（当前调试显示模型可能被相机裁剪或缩放过小）。
+3. 将临时调试着色器恢复到正式光照/纹理着色器并移除覆盖红三角形。
+
+我可以在你确认要继续 3D 路线时帮助完成这些步骤。
+
+---
+
+## 开发与贡献
+
+欢迎 PR、Issue 和建议。常见工作流程：
+
+```bash
+git checkout -b feature/your-feature
+# 修改代码
+git commit -am "feat: ..."
+git push origin feature/your-feature
+```
+
+---
+
+如果你希望，我可以：
+
+- 把图片加载入口加到设置面板（UI 上选择图片并保存到 config），
+- 或把图片渲染改为保留纵横比并支持居中/裁剪/填充模式，
+- 或继续调试 FBX 渲染管线。
+
+请告诉我你接下来想优先做哪一项，我会继续实现并验证。
+
+---
+
+© 开发者团队

@@ -5,6 +5,7 @@
 
 import logging
 from typing import Optional, List
+from pathlib import Path
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
@@ -307,20 +308,23 @@ class SettingsPanel(QWidget):
         
         model_layout.addLayout(scale_layout)
         
-        # 动画速度
+        # 动画速度 (已禁用 - 2D图片不支持动画)
         anim_layout = QHBoxLayout()
         anim_label = QLabel("动画速度:")
         anim_label.setStyleSheet(self._label_style())
+        anim_label.setEnabled(False)
         anim_layout.addWidget(anim_label)
-        
+
         self.anim_speed = QDoubleSpinBox()
         self.anim_speed.setRange(0.1, 3.0)
         self.anim_speed.setSingleStep(0.1)
         self.anim_speed.setValue(1.0)
         self.anim_speed.setStyleSheet(self._spin_box_style())
+        self.anim_speed.setEnabled(False)  # 禁用控件
+        self.anim_speed.setToolTip("2D图片渲染模式不支持动画")
         anim_layout.addWidget(self.anim_speed)
         anim_layout.addStretch()
-        
+
         model_layout.addLayout(anim_layout)
         
         layout.addWidget(model_group)
@@ -482,6 +486,14 @@ class SettingsPanel(QWidget):
         model_layout.addStretch()
         
         ollama_layout.addLayout(model_layout)
+
+        # 允许网络访问选项
+        network_layout = QHBoxLayout()
+        self.ollama_allow_network = QCheckBox("允许模型访问网络")
+        self.ollama_allow_network.setStyleSheet(self._checkbox_style())
+        network_layout.addWidget(self.ollama_allow_network)
+        network_layout.addStretch()
+        ollama_layout.addLayout(network_layout)
         
         # 温度参数
         temp_layout = QHBoxLayout()
@@ -678,12 +690,13 @@ class SettingsPanel(QWidget):
         self.minimize_to_tray.setChecked(config.general.minimize_to_tray)
         self.voice_feedback.setChecked(config.general.voice_feedback)
         
-        # 模型设置
+        # 模型设置 (已改为图片显示)
         model_index = self.model_combo.findText(config.model.current)
         if model_index >= 0:
             self.model_combo.setCurrentIndex(model_index)
         self.model_scale.setValue(config.model.scale)
-        self.anim_speed.setValue(config.model.animation_speed)
+        # 动画速度设置已禁用 (2D图片不支持动画)
+        self.anim_speed.setValue(1.0)  # 设置默认值
         
         # 语音设置
         lang_map = {
@@ -705,6 +718,11 @@ class SettingsPanel(QWidget):
             self.ollama_model.setCurrentIndex(model_index)
         self.temperature.setValue(config.ollama.temperature)
         self.max_tokens.setValue(config.ollama.max_tokens)
+        # Ollama 网络访问设置
+        try:
+            self.ollama_allow_network.setChecked(bool(getattr(config.ollama, 'allow_network', False)))
+        except Exception:
+            self.ollama_allow_network.setChecked(False)
         
     def _save_settings(self):
         """保存设置"""
@@ -715,10 +733,10 @@ class SettingsPanel(QWidget):
         config.general.minimize_to_tray = self.minimize_to_tray.isChecked()
         config.general.voice_feedback = self.voice_feedback.isChecked()
         
-        # 模型设置
+        # 模型设置 (已改为图片显示)
         config.model.current = self.model_combo.currentText()
         config.model.scale = self.model_scale.value()
-        config.model.animation_speed = self.anim_speed.value()
+        # 动画速度设置已禁用，不保存
         
         # 语音设置
         lang_map = ['zh-CN', 'zh-TW', 'en-US', 'ja-JP', 'ko-KR']
@@ -732,6 +750,11 @@ class SettingsPanel(QWidget):
         config.ollama.model = self.ollama_model.currentText()
         config.ollama.temperature = self.temperature.value()
         config.ollama.max_tokens = self.max_tokens.value()
+        # Ollama 网络访问设置
+        try:
+            config.ollama.allow_network = bool(self.ollama_allow_network.isChecked())
+        except Exception:
+            config.ollama.allow_network = False
         
         # 保存到文件
         config.save()

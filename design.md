@@ -69,23 +69,27 @@
 - 持续时间: 300ms
 - 缓动函数: ease-out
 
-### 3D模型动画
+### 3D模型动画 (已改用2D渲染)
 
-**空闲动画**
-- 呼吸效果: 轻微缩放 (1.0 ↔ 1.02)
-- 持续时间: 2000ms
-- 循环: infinite
-- 缓动函数: ease-in-out
+**渲染方式变更说明**
+- 原始设计: 使用 QOpenGLWidget 进行 OpenGL 3.3 渲染
+- 实际问题: QOpenGLWidget 在 PyQt6 + Intel Iris Xe Graphics 上存在严重渲染 bug，所有内容不可见
+- 最终方案: 改用 QWidget + QPainter 进行 2D 图片渲染
+- 影响: 不再支持 3D 模型和动画，改用静态图片显示
 
-**说话动画**
-- 口型同步: 根据语音音量缩放嘴部
-- 身体摆动: 轻微左右摇摆 ±3deg
-- 手势配合: 随机手势动画
+**当前支持的渲染特性**
+- 图片加载: PNG, JPG, JPEG, BMP 格式
+- 缩放模式:
+  - "fit": 保持宽高比，完整显示图片
+  - "stretch": 拉伸填充整个窗口
+- 背景显示: 无图片时显示渐变蓝色背景
+- 鼠标交互: 支持基本的鼠标事件记录
 
-**响应动画**
-- 被点击时: 跳跃效果 (translateY: 0 → -20px → 0)
-- 持续时间: 400ms
-- 缓动函数: cubic-bezier(0.68, -0.55, 0.265, 1.55)
+**已禁用的功能**
+- FBX 3D 模型加载和显示
+- 3D 模型动画（呼吸、说话、响应等）
+- OpenGL 着色器渲染
+- 3D 变换和交互
 
 ### 语音波形动画
 
@@ -299,9 +303,9 @@ ai-assistant/
     "always_on_top": true
   },
   "model": {
-    "current": "default.fbx",
-    "scale": 1.0,
-    "animation_speed": 1.0
+    "current": "default.png",
+    "scale_mode": "fit",
+    "scale": 1.0
   },
   "voice": {
     "recognition_lang": "zh-CN",

@@ -4,6 +4,7 @@
 """
 
 import logging
+import os
 import tempfile
 import asyncio
 import threading
@@ -169,9 +170,10 @@ class VoiceSynthesizer:
             return
             
         try:
-            # 创建临时文件
-            with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as tmp_file:
-                tmp_path = tmp_file.name
+            # 创建临时文件，使用UUID确保文件名唯一
+            import uuid
+            temp_dir = tempfile.gettempdir()
+            tmp_path = os.path.join(temp_dir, f"edge_tts_{uuid.uuid4()}.mp3")
                 
             # 运行异步TTS
             asyncio.run(self._edge_tts_synthesize(task.text, tmp_path))
@@ -180,7 +182,10 @@ class VoiceSynthesizer:
             self._play_audio(tmp_path)
             
             # 删除临时文件
-            Path(tmp_path).unlink(missing_ok=True)
+            try:
+                Path(tmp_path).unlink(missing_ok=True)
+            except Exception as e:
+                logger.warning(f"删除临时文件失败: {e}")
             
         except Exception as e:
             logger.error(f"Edge TTS错误: {e}")
@@ -196,8 +201,25 @@ class VoiceSynthesizer:
             text: 文本
             output_path: 输出路径
         """
-        communicate = edge_tts.Communicate(text, self.edge_voice)
-        await communicate.save(output_path)
+        logger.debug(f"Edge TTS合成文本: {text}")
+        try:
+            communicate = edge_tts.Communicate(text, self.edge_voice)
+            await communicate.save(output_path)
+            logger.debug(f"Edge TTS音频已保存到: {output_path}")
+
+            # 检查文件是否成功创建
+            if not Path(output_path).exists():
+                raise Exception("音频文件未创建")
+
+            # 检查文件大小
+            file_size = Path(output_path).stat().st_size
+            if file_size == 0:
+                raise Exception("音频文件为空")
+
+            logger.debug(f"Edge TTS音频文件大小: {file_size} 字节")
+        except Exception as e:
+            logger.error(f"Edge TTS合成失败: {e}")
+            raise
         
     def _play_audio(self, audio_path: str):
         """
@@ -217,6 +239,90 @@ class VoiceSynthesizer:
         except Exception as e:
             logger.error(f"播放音频错误: {e}")
             
+    def _clean_text(self, text: str) -> str:
+        """
+        清理文本，去除颜文字和表情符号
+
+        Args:
+            text: 原始文本
+
+        Returns:
+            清理后的文本
+        """
+        import re
+
+        # 保存原始文本用于回退
+        original_text = text
+
+        # 去除常见颜文字
+        kaomoji_patterns = [
+            r'[\(（][\^_~oO●●><×xTtDd；;]+[\)）]',  # 基本颜文字
+            r'[\(（][\^_~oO●●><×xTtDd；:]+[\)）]',  # 带冒号的颜文字
+            r'[\(（][\^_~oO●●><×xTtDd；:]+[\|/\\]+[\)）]',  # 带符号的颜文字
+            r'[\(（][\^_~oO●●><×xTtDd；:]+[vV]+[\)）]',  # 带v的颜文字
+            r'[\(（][\^_~oO●●><×xTtDd；:]+[\'\"]+[\)）]',  # 带引号的颜文字
+            r'[oO][\_\-][oO]',  # O_O
+            r'[oO][\_\-][0O]',  # O_0
+            r'[>][\_\-][<]',  # >_<
+            r'[\^][\_\-][\^]',  # ^_^
+            r'[T][\_\-][T]',  # T_T
+            r'[T][\_\-][A]',  # T_A
+            r'[\:][\_\-][\)]',  # :)
+            r'[\:][\_\-][\(]',  # :(
+            r'[\:][\_\-][D]',  # :D
+            r'[\:][\_\-][P]',  # :P
+            r'[\:][\_\-][oO]',  # :o
+            r'[\;][\_\-][\)]',  # ;)
+            r'[X][\_\-][D]',  # XD
+            r'[=][\_\-][\)]',  # =)
+            r'[=][\_\-][\(]',  # =(
+            r'[>][\_\-][>]',  # >>
+            r'[<][\_\-][<]',  # <<
+            r'[\^][\_\-][\^][;；]',  # ^^;
+            r'[\^][\_\-][\^][vV]',  # ^^v
+            r'[\(][\^][\_\-][\^][\)]',  # (^_^)
+            r'[\(][\^][\_\-][\^][\)][vV]',  # (^_^)v
+            r'[\(][T][\_\-][T][\)]',  # (T_T)
+            r'[\(][>][\_\-][<][\)]',  # (>_<)
+            r'[\(][oO][\_\-][oO][\)]',  # (O_O)
+            r'[\(][oO][\_\-][0O][\)]',  # (O_0)
+            r'[\(][;；][\_\-][;；][\)]',  # (;;)
+            r'[\(][\_\-][\_\-][\)]',  # (__)
+            r'[\(][\^][\_\-][\^][\)][;；]',  # (^_^);
+        ]
+
+        for pattern in kaomoji_patterns:
+            text = re.sub(pattern, '', text)
+
+        # 去除常见的表情符号 (使用Unicode范围)
+        emoji_pattern = re.compile(
+            "["
+            "😀-🙏"  # emoticons
+            "🌀-🗿"  # symbols & pictographs
+            "🚀-🛿"  # transport & map symbols
+            "🜀-🝿"  # alchemical symbols
+            "🞀-🟿"  # Geometric Shapes Extended
+            "🠀-🣿"  # Supplemental Arrows-C
+            "🤀-🧿"  # Supplemental Symbols and Pictographs
+            "🨀-🩯"  # Chess Symbols
+            "🩰-🫿"  # Symbols and Pictographs Extended-A
+            "✂-➰"  # Dingbats
+            "Ⓜ-🉑" 
+            "]+", flags=re.UNICODE
+        )
+        text = emoji_pattern.sub('', text)
+
+        # 去除多余的空格
+        text = re.sub(r'\s+', ' ', text)
+        text = text.strip()
+
+        # 如果清理后文本为空，返回原始文本
+        if not text:
+            logger.warning(f"文本清理后为空，返回原始文本: {original_text[:50]}...")
+            return original_text
+
+        return text
+
     def speak(
         self, 
         text: str, 
@@ -237,6 +343,9 @@ class VoiceSynthesizer:
         """
         if not text:
             return
+
+        # 清理文本，去除颜文字和表情符号
+        text = self._clean_text(text)
             
         task = SpeechTask(
             text=text,
@@ -265,6 +374,9 @@ class VoiceSynthesizer:
             rate: 语速 (可选)
             volume: 音量 (可选)
         """
+        # 清理文本，去除颜文字和表情符号
+        text = self._clean_text(text)
+
         task = SpeechTask(
             text=text,
             voice=voice or self.current_voice,

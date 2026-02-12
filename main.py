@@ -13,10 +13,10 @@ AI助手桌面应用 - 主程序入口
 """
 
 import sys
-import os
 import logging
 import signal
 from pathlib import Path
+import subprocess
 
 # 添加项目根目录到路径
 base_dir = Path(__file__).parent
@@ -70,7 +70,7 @@ class AIAssistantApp:
         logger.info("=" * 50)
         logger.info("AI助手桌面应用启动中...")
         logger.info("=" * 50)
-        
+
         # 创建Qt应用
         self.app = QApplication(sys.argv)
         self.app.setQuitOnLastWindowClosed(False)  # 关闭窗口不退出
@@ -92,23 +92,38 @@ class AIAssistantApp:
         # 创建主窗口
         self.main_window = MainWindow()
         logger.info("主窗口创建完成")
-        screen = self.app.primaryScreen()
-        available_area = screen.availableGeometry()
+        # 计算并设置窗口位置，注意 primaryScreen() 可能返回 None（无显示环境）
+        try:
+            screen = self.app.primaryScreen()
+            # 回退到配置中的位置以防 screen 为 None
+            if screen is None:
+                logger.warning("无法获取主屏幕 (primaryScreen 返回 None)，将使用配置中的窗口位置作为回退")
+                target_x = config.window.pos_x
+                target_y = config.window.pos_y
+            else:
+                available_area = screen.availableGeometry()
 
-        # 获取窗口自身尺寸
-        window_width = self.main_window.width()
-        window_height = self.main_window.height()
+                # 获取窗口自身尺寸
+                window_width = self.main_window.width()
+                window_height = self.main_window.height()
 
-        # 计算右下角位置：屏幕右下角坐标 - 窗口尺寸（确保窗口完全在屏幕内）
-        target_x = available_area.right() - window_width
-        target_y = available_area.bottom() - window_height
+                # 计算右下角位置：屏幕右下角坐标 - 窗口尺寸（确保窗口完全在屏幕内）
+                target_x = available_area.right() - window_width
+                target_y = available_area.bottom() - window_height
 
-        # 兜底：防止窗口尺寸超过屏幕（位置不小于0）
-        target_x = max(0, target_x)
-        target_y = max(0, target_y)
+                # 兜底：防止窗口尺寸超过屏幕（位置不小于0）
+                target_x = max(0, target_x)
+                target_y = max(0, target_y)
 
-        # 强制移动窗口到计算出的右下角位置
-        self.main_window.move(target_x, target_y)
+            # 强制移动窗口到计算出的位置
+            self.main_window.move(target_x, target_y)
+        except Exception:
+            # 任意异常时使用配置中的位置并记录日志
+            logger.exception("设置窗口位置时发生异常，使用配置中的位置作为回退")
+            try:
+                self.main_window.move(config.window.pos_x, config.window.pos_y)
+            except Exception:
+                logger.exception("回退移动窗口也失败")
         
         # 创建系统托盘
         self.tray_manager = TrayIconManager(self.main_window)
@@ -171,7 +186,7 @@ class AIAssistantApp:
         self.app.quit()
 
 
-def signal_handler(signum, frame):
+def signal_handler(signum, _frame):
     """信号处理函数"""
     logger.info(f"接收到信号: {signum}")
     QApplication.quit()
@@ -189,4 +204,5 @@ def main():
 
 
 if __name__ == "__main__":
+    subprocess.run(["python", "./ai-assistant/logs/clean.py"])
     sys.exit(main())

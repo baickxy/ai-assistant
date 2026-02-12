@@ -4,9 +4,7 @@
 """
 
 import json
-import os
 from dataclasses import dataclass, asdict
-from typing import Optional
 from pathlib import Path
 
 
@@ -23,10 +21,10 @@ class WindowConfig:
 
 @dataclass
 class ModelConfig:
-    """3D模型配置"""
-    current: str = "default.fbx"
-    scale: float = 1.0
-    animation_speed: float = 1.0
+    """图片显示配置 (原3D模型配置已改用2D图片)"""
+    current: str = "20240908154446102206.png"  # 当前显示的图片文件名（使用icons目录下实际存在的图片）
+    scale_mode: str = "fit"  # 缩放模式: "fit" (保持宽高比) 或 "stretch" (拉伸填充)
+    scale: float = 1.0  # 预留，未来可能用于缩放
 
 
 @dataclass
@@ -57,6 +55,12 @@ class OllamaConfig:
     temperature: float = 0.7
     max_tokens: int = 2048
     timeout: int = 30
+    # 是否允许模型在推理时访问外部网络（由服务端实现支持时生效）
+    allow_network: bool = True
+    # 是否允许模型调用系统工具（如时间、位置等）
+    allow_system_tools: bool = True
+    # 系统工具调用的最大迭代次数
+    max_tool_iterations: int = 3
 
 
 @dataclass
@@ -132,15 +136,45 @@ class ConfigManager:
             print(f"保存配置失败: {e}")
     
     def get_model_path(self) -> Path:
-        """获取当前模型路径"""
-        return self.base_dir / "assets" / "models" / self.model.current
-    
+        """获取当前图片路径 (原模型路径)"""
+        # 先尝试从images目录加载，如果不存在则从icons目录加载
+        images_dir = self.base_dir / "assets" / "images"
+        icons_dir = self.base_dir / "assets" / "icons"
+
+        # 尝试从images目录加载
+        image_path = images_dir / self.model.current
+        if image_path.exists():
+            return image_path
+
+        # 如果images目录不存在或文件不存在，尝试从icons目录加载
+        if icons_dir.exists():
+            icon_path = icons_dir / self.model.current
+            if icon_path.exists():
+                return icon_path
+
+            # 如果指定的文件不存在，返回icons目录下的第一个png文件
+            for img_file in icons_dir.glob("*.png"):
+                return img_file
+
+        # 如果都找不到，返回默认路径
+        return icons_dir / self.model.current
+
     def get_available_models(self) -> list:
-        """获取可用的模型列表"""
-        models_dir = self.base_dir / "assets" / "models"
-        if not models_dir.exists():
-            return []
-        return [f.name for f in models_dir.iterdir() if f.suffix.lower() == '.fbx']
+        """获取可用的图片列表 (原模型列表)"""
+        # 从icons和images两个目录查找图片
+        images_dirs = [
+            self.base_dir / "assets" / "icons",
+            self.base_dir / "assets" / "images"
+        ]
+
+        models = []
+        for images_dir in images_dirs:
+            if images_dir.exists():
+                for f in images_dir.iterdir():
+                    if f.suffix.lower() in ['.png', '.jpg', '.jpeg', '.bmp']:
+                        models.append(f.name)
+
+        return models
     
     def update_window_position(self, x: int, y: int) -> None:
         """更新窗口位置"""

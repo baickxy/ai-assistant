@@ -46,10 +46,9 @@ class MessageBubble(QFrame):
             MessageBubble {{
                 background-color: {bg_color};
                 border-radius: {border_radius};
-                padding: 12px;
             }}
         """)
-        
+
         # 布局
         layout = QVBoxLayout(self)
         layout.setContentsMargins(12, 12, 12, 12)
@@ -58,6 +57,15 @@ class MessageBubble(QFrame):
         # 文本标签
         self.label = QLabel(self.text)
         self.label.setWordWrap(True)
+        # 设置大小策略，使标签能够扩展
+        self.label.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Minimum
+        )
+        # 设置最大宽度，避免文本超出气泡范围
+        # 聊天面板350px - 容器边距32px - 滚动条6px - 气泡边距24px = 288px
+        self.label.setMaximumWidth(288)
+        self.label.setMinimumWidth(50)
         self.label.setStyleSheet(f"""
             QLabel {{
                 color: {text_color};
@@ -77,11 +85,31 @@ class MessageBubble(QFrame):
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Minimum
         )
+        # 设置气泡最小宽度，避免太窄
+        self.setMinimumWidth(100)
         
     def update_text(self, text: str):
         """更新文本"""
         self.text = text
         self.label.setText(text)
+        # 保证 QLabel 重新计算大小与布局，避免文本看似被截断
+        try:
+            self.label.adjustSize()
+            self.label.updateGeometry()
+            self.updateGeometry()
+            self.adjustSize()
+        except Exception:
+            pass
+
+    def resizeEvent(self, event):
+        """在气泡大小变化时调整布局"""
+        try:
+            # 确保标签根据气泡大小自动调整
+            self.label.adjustSize()
+            self.adjustSize()
+        except Exception:
+            pass
+        return super().resizeEvent(event)
 
 
 class ChatWorker(QThread):
@@ -90,22 +118,27 @@ class ChatWorker(QThread):
     token_received = pyqtSignal(str)
     response_complete = pyqtSignal(str)
     error_occurred = pyqtSignal(str)
+    confirmation_requested = pyqtSignal(dict)  # 新增：需要用户确认的信号
     
     def __init__(self, llm_client: OllamaClient, message: str):
         super().__init__()
         self.llm_client = llm_client
         self.message = message
+        self.pending_confirmation = None  # 待确认的操作
         
     def run(self):
         """运行聊天"""
         try:
-            full_response = []
-            
-            for token in self.llm_client.chat(self.message, stream=True):
-                full_response.append(token)
-                self.token_received.emit(token)
-                
-            self.response_complete.emit(''.join(full_response))
+            # 使用带工具桥接的接口，获取最终完整回复
+            final = self.llm_client.chat_with_tools(self.message, stream=False)
+
+            # 为了保持 UI 的流式感，将最终回复分片发送到 token_received
+            if final:
+                chunk_size = 64
+                for i in range(0, len(final), chunk_size):
+                    self.token_received.emit(final[i:i+chunk_size])
+
+            self.response_complete.emit(final)
             
         except Exception as e:
             self.error_occurred.emit(str(e))
@@ -239,11 +272,15 @@ class ChatPanel(QWidget):
         
         # 消息容器
         self.messages_widget = QWidget()
+        self.messages_widget.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Minimum
+        )
         self.messages_layout = QVBoxLayout(self.messages_widget)
         self.messages_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.messages_layout.setSpacing(12)
         self.messages_layout.setContentsMargins(4, 4, 4, 4)
-        
+
         self.scroll_area.setWidget(self.messages_widget)
         container_layout.addWidget(self.scroll_area)
         
@@ -271,7 +308,12 @@ class ChatPanel(QWidget):
             }
         """)
         self.input_field.returnPressed.connect(self._send_message)
-        input_layout.addWidget(self.input_field)
+        # 设置输入框的大小策略为可扩展
+        self.input_field.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed
+        )
+        input_layout.addWidget(self.input_field, stretch=1)
         
         # 发送按钮
         send_btn = QPushButton("发送")
@@ -323,13 +365,24 @@ class ChatPanel(QWidget):
         # 创建消息行布局
         row = QHBoxLayout()
         row.addStretch()
-        
+
         bubble = MessageBubble(text, is_user=True)
+        # 设置气泡大小策略
+        bubble.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Minimum
+        )
         row.addWidget(bubble)
-        
+
         self.messages_layout.addLayout(row)
         self.message_bubbles.append(bubble)
-        
+
+        # 立即适配新加入气泡的宽度
+        try:
+            self._adapt_bubble_width(bubble)
+        except Exception:
+            pass
+
         # 滚动到底部
         self._scroll_to_bottom()
         
@@ -337,14 +390,24 @@ class ChatPanel(QWidget):
         """添加AI消息"""
         # 创建消息行布局
         row = QHBoxLayout()
-        
+
         self.current_ai_bubble = MessageBubble(text, is_user=False)
+        # 设置AI消息气泡的大小策略
+        self.current_ai_bubble.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Minimum
+        )
+        # AI消息靠左，但让气泡可以扩展
         row.addWidget(self.current_ai_bubble)
         row.addStretch()
-        
+
         self.messages_layout.addLayout(row)
         self.message_bubbles.append(self.current_ai_bubble)
-        
+        try:
+            self._adapt_bubble_width(self.current_ai_bubble)
+        except Exception:
+            pass
+
         # 滚动到底部
         self._scroll_to_bottom()
         
@@ -352,7 +415,28 @@ class ChatPanel(QWidget):
         """更新AI消息"""
         if self.current_ai_bubble:
             self.current_ai_bubble.update_text(text)
+            try:
+                # 文本变更后也尝试适配宽度
+                self._adapt_bubble_width(self.current_ai_bubble)
+            except Exception:
+                pass
             self._scroll_to_bottom()
+
+    def _adapt_bubble_width(self, bubble: MessageBubble):
+        """根据当前消息区域宽度调整单个气泡内 label 的最大宽度。"""
+        if not bubble:
+            return
+
+        # 聊天面板固定宽度为350，减去边距和滚动条
+        # 容器边距: 16 * 2 = 32
+        # 滚动条宽度: 6
+        # 气泡内边距: 12 * 2 = 24
+        # 总计边距: 32 + 6 + 24 = 62
+        max_w = 350 - 62  # = 288
+
+        if hasattr(bubble, 'label') and bubble.label is not None:
+            bubble.label.setMaximumWidth(max_w)
+            bubble.updateGeometry()
             
     def _send_to_llm(self, message: str):
         """发送消息给LLM"""
@@ -401,6 +485,22 @@ class ChatPanel(QWidget):
                 self.scroll_area.verticalScrollBar().maximum()
             )
         )
+
+    def resizeEvent(self, a0):
+        """当面板大小变化时，调整所有消息气泡的布局"""
+        try:
+            # 调整所有消息气泡的布局
+            for bubble in list(self.message_bubbles):
+                try:
+                    if hasattr(bubble, 'label'):
+                        bubble.label.adjustSize()
+                        bubble.updateGeometry()
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+        return super().resizeEvent(a0)
         
     def clear_history(self):
         """清除历史消息"""
