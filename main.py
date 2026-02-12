@@ -92,6 +92,23 @@ class AIAssistantApp:
         # 创建主窗口
         self.main_window = MainWindow()
         logger.info("主窗口创建完成")
+        screen = self.app.primaryScreen()
+        available_area = screen.availableGeometry()
+
+        # 获取窗口自身尺寸
+        window_width = self.main_window.width()
+        window_height = self.main_window.height()
+
+        # 计算右下角位置：屏幕右下角坐标 - 窗口尺寸（确保窗口完全在屏幕内）
+        target_x = available_area.right() - window_width
+        target_y = available_area.bottom() - window_height
+
+        # 兜底：防止窗口尺寸超过屏幕（位置不小于0）
+        target_x = max(0, target_x)
+        target_y = max(0, target_y)
+
+        # 强制移动窗口到计算出的右下角位置
+        self.main_window.move(target_x, target_y)
         
         # 创建系统托盘
         self.tray_manager = TrayIconManager(self.main_window)
