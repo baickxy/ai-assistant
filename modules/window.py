@@ -48,12 +48,12 @@ class MainWindow(QMainWindow):
     def _setup_window(self):
         """设置窗口属性"""
         # 无边框窗口
-        self.setWindowFlags(
-            Qt.WindowType.FramelessWindowHint |
-            Qt.WindowType.WindowStaysOnTopHint |
-            Qt.WindowType.Tool  # 不在任务栏显示
-        )
-        
+        #self.setWindowFlags(
+        #    Qt.WindowType.FramelessWindowHint |
+        #    Qt.WindowType.WindowStaysOnTopHint |
+        #    Qt.WindowType.Tool  # 不在任务栏显示
+        #)
+
         # 透明背景
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         
